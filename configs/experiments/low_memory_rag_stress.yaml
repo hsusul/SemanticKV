@@ -1,0 +1,12 @@
+experiment_id: low_memory_rag_stress
+seed: 101
+policies: [fifo, lru, lfu, size_aware_lru, static_semantic, adaptive_semantic]
+workload_families: [low_memory_rag_stress]
+num_sessions: 36
+requests_per_session: 7
+cache_capacity_tokens: 2700
+token_latency_ms: 0.08
+base_ttft_ms: 80.0
+output_dir: outputs/experiments
+metadata:
+  description: Large shared retrieved-context blocks compete with unique user queries under tight cache capacity.

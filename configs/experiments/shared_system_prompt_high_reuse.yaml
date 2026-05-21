@@ -1,0 +1,13 @@
+experiment_id: shared_system_prompt_high_reuse
+seed: 202
+policies: [fifo, lru, lfu, size_aware_lru, static_semantic, adaptive_semantic]
+workload_families: [shared_system_prompt_high_reuse]
+num_sessions: 48
+requests_per_session: 6
+cache_capacity_tokens: 220
+token_latency_ms: 0.08
+base_ttft_ms: 80.0
+output_dir: outputs/experiments
+metadata:
+  description: Nearly all requests share stable system and template blocks while user requests are unique.
+

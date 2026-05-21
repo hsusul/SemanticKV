@@ -1,0 +1,12 @@
+experiment_id: workload_shift_static_vs_adaptive
+seed: 505
+policies: [fifo, lru, lfu, size_aware_lru, static_semantic, adaptive_semantic]
+workload_families: [workload_shift_static_vs_adaptive]
+num_sessions: 44
+requests_per_session: 6
+cache_capacity_tokens: 2700
+token_latency_ms: 0.08
+base_ttft_ms: 80.0
+output_dir: outputs/experiments
+metadata:
+  description: Traffic shifts from system/template reuse to retrieved-context reuse to test adaptive weighting.

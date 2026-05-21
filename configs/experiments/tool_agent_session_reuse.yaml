@@ -1,0 +1,13 @@
+experiment_id: tool_agent_session_reuse
+seed: 303
+policies: [fifo, lru, lfu, size_aware_lru, static_semantic, adaptive_semantic]
+workload_families: [tool_agent_session_reuse]
+num_sessions: 34
+requests_per_session: 8
+cache_capacity_tokens: 360
+token_latency_ms: 0.08
+base_ttft_ms: 80.0
+output_dir: outputs/experiments
+metadata:
+  description: Tool schemas are global, tool outputs are reused inside short multi-turn sessions, and ephemeral outputs churn.
+

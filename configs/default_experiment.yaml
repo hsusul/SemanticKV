@@ -1,0 +1,23 @@
+experiment_id: default_mvp
+seed: 11
+policies:
+  - fifo
+  - lru
+  - lfu
+  - size_aware_lru
+  - static_semantic
+  - adaptive_semantic
+workload_families:
+  - repeated_system
+  - rag_shared_corpus
+  - support_agent
+  - coding_assistant
+  - legal_evidence
+  - tool_using_agent
+num_sessions: 25
+requests_per_session: 5
+cache_capacity_tokens: 1800
+token_latency_ms: 0.08
+base_ttft_ms: 80.0
+output_dir: outputs/experiments
+
