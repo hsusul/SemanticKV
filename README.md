@@ -154,9 +154,3 @@ A credible real-serving validation path would:
 2. Calibrate token latency and memory-cost estimates against measured prefill behavior.
 3. Replay real traces through SemanticKV and compare predicted policy deltas.
 4. Add backend-specific adapters only where cache admission/eviction hooks are exposed.
-
-## Resume Bullets
-
-- Built `SemanticKV`, an LLM serving infrastructure simulator and FastAPI middleware for semantic-aware prefix/KV-cache eviction, comparing FIFO/LRU/LFU/size-aware/static/adaptive policies across deterministic RAG, tool-agent, legal-review, and workload-shift stress tests.
-- Designed a SAECache-inspired adaptive eviction policy using semantic block type, recency decay, reuse frequency, estimated prefill savings, memory-cost penalties, and online regret feedback; demonstrated up to `35.66%` simulated TTFT improvement vs LRU in low-memory RAG stress.
-- Added reproducible systems-evaluation tooling with one-command aggregate benchmarks, JSON/CSV/Markdown outputs, matplotlib plots, pytest coverage, and explicit simulated-latency limitations for future vLLM/Ray Serve validation.
