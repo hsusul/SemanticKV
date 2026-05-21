@@ -167,6 +167,85 @@ python scripts/replay_trace.py \
 
 The collector can drop raw prompt text and keep only deterministic content hashes, token counts, semantic labels, and timing fields. This mirrors the production-safe telemetry shape needed before collecting traces from vLLM, SGLang, Ray Serve, or other serving stacks.
 
+## Real Backend Telemetry via OpenAI-Compatible Proxy
+
+SemanticKV includes an OpenAI-compatible telemetry proxy for vLLM, SGLang, or any server exposing `/v1/chat/completions`. The proxy forwards requests to the upstream backend, measures proxy-level TTFT/total latency, segments prompt messages into trace blocks, and writes JSONL traces for replay.
+
+This is still observability only. It does not control backend KV-cache admission, eviction, or internal prefix-cache behavior.
+
+Example:
+
+```bash
+# Start vLLM separately, example only:
+vllm serve <model> --enable-prefix-caching --port 8001
+
+# Start SemanticKV proxy:
+SEMANTICKV_UPSTREAM_BASE_URL=http://localhost:8001 \
+uvicorn apps.proxy.main:app --port 8010
+
+# Send OpenAI-compatible traffic to the proxy:
+curl http://localhost:8010/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Session-ID: demo-session" \
+  -H "X-Tenant-ID: demo-tenant" \
+  -d '{
+    "model": "served-model",
+    "messages": [
+      {"role": "system", "content": "You are a concise assistant."},
+      {"role": "user", "content": "CONTEXT: shared document\n\nUSER: summarize it"}
+    ]
+  }'
+
+# Replay generated proxy trace:
+python scripts/replay_trace.py \
+  --trace outputs/live_traces/<trace>.jsonl \
+  --cache-token-budget 10000 \
+  --policies lru adaptive_semantic static_semantic
+```
+
+Proxy configuration:
+
+- `SEMANTICKV_UPSTREAM_BASE_URL`
+- `SEMANTICKV_TRACE_OUTPUT_DIR`
+- `SEMANTICKV_REDACT_TEXT=true/false`
+- `SEMANTICKV_PROXY_TIMEOUT_SECONDS`
+
+## Semantic-Aware Routing
+
+SemanticKV also includes cache-locality routing, the first practical form of backend cache influence that does not require modifying vLLM, SGLang, or Ray Serve internals.
+
+The router selects among OpenAI-compatible backend replicas using prompt block hashes and semantic labels. It maintains an approximate router-side cache state for each replica based on requests previously routed there, then tries to send similar semantic prefixes to the same replica.
+
+This is similar in spirit to prefix-aware routing, but SemanticKV can weight overlap by block type: system prompts and templates may matter more than one-off user text, and retrieved context can be weighted differently from tool output or assistant history.
+
+It does not control backend KV-cache eviction. It only influences which replica receives a request.
+
+Run the local in-process demo:
+
+```bash
+python scripts/demo_semantic_router.py
+```
+
+Run the router service against OpenAI-compatible replicas:
+
+```bash
+SEMANTICKV_REPLICAS=http://localhost:8101,http://localhost:8102 \
+SEMANTICKV_ROUTING_POLICY=semantic_locality \
+uvicorn apps.router.main:app --port 8020
+```
+
+Send traffic to:
+
+```text
+http://localhost:8020/v1/chat/completions
+```
+
+Routing outputs are written under:
+
+```text
+outputs/routing/
+```
+
 ## Fast Health Check
 
 ```bash

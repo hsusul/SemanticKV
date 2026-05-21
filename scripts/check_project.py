@@ -20,6 +20,10 @@ def main() -> None:
     from semantic_kv.traces.replay import TraceReplayRunner
     from semantic_kv.collectors.jsonl_collector import JsonlTraceCollector
     from semantic_kv.collectors.mock_backend import MockLLMBackend
+    from semantic_kv.adapters.openai_proxy.proxy import OpenAICompatibleTelemetryProxy
+    from semantic_kv.routing.router import SemanticKVRouter
+    from apps.proxy.main import app as proxy_app
+    from apps.router.main import app as router_app
 
     config_dir = Path("configs/experiments")
     if not config_dir.exists():
@@ -56,6 +60,18 @@ def main() -> None:
     _ = MockLLMBackend()
     if not Path("scripts/collect_mock_trace.py").exists():
         raise SystemExit("scripts/collect_mock_trace.py does not exist")
+    if not Path("scripts/run_openai_proxy.py").exists():
+        raise SystemExit("scripts/run_openai_proxy.py does not exist")
+    if not Path("scripts/demo_semantic_router.py").exists():
+        raise SystemExit("scripts/demo_semantic_router.py does not exist")
+    _ = OpenAICompatibleTelemetryProxy
+    _ = SemanticKVRouter
+    proxy_routes = {route.path for route in proxy_app.routes}
+    if "/v1/chat/completions" not in proxy_routes:
+        raise SystemExit("OpenAI proxy app missing /v1/chat/completions route")
+    router_routes = {route.path for route in router_app.routes}
+    if "/v1/replicas" not in router_routes:
+        raise SystemExit("Semantic router app missing /v1/replicas route")
 
     print("SemanticKV project check passed")
     print(f"Package version: {semantic_kv.__version__}")
@@ -63,6 +79,8 @@ def main() -> None:
     print(f"Policies: {policy_names}")
     print(f"Example traces: {len(required_traces)}")
     print("Collector imports: ok")
+    print("OpenAI proxy imports: ok")
+    print("Semantic router imports: ok")
     print("Trace replay imports: ok")
     print("FastAPI app import: ok")
 

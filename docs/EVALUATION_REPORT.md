@@ -170,3 +170,43 @@ The collector records:
 Raw prompt text can be dropped so traces preserve cache-relevant structure without storing sensitive prompts. This makes the layer suitable as an observability/export step before any real vLLM, SGLang, or Ray Serve integration.
 
 The current collector does not control backend eviction. It creates replayable telemetry. Real backend integration should come later, after offline replay shows the simulator tracks measured behavior well enough to justify implementation work.
+
+## Milestone 3 — Real Backend Telemetry
+
+SemanticKV now includes an OpenAI-compatible proxy adapter. It can sit in front of a vLLM, SGLang, or OpenAI-compatible backend and collect serving-style traces while forwarding `/v1/chat/completions` traffic.
+
+Proxy-level telemetry can measure:
+
+- request timestamp
+- model name
+- session and tenant headers
+- semantic prompt blocks
+- proxy-observed TTFT for streaming responses
+- proxy-observed total latency
+- upstream status code
+
+Proxy-level telemetry cannot always observe:
+
+- internal KV-cache hit/miss events
+- exact prefix-cache block reuse inside the backend
+- backend eviction decisions
+- GPU memory pressure
+
+Those require backend metrics or explicit instrumentation from vLLM, SGLang, or Ray Serve. The proxy is therefore a telemetry adapter, not a cache-control integration. Its value is that it produces replayable traces from real traffic paths without modifying backend internals. Stronger validation would combine these proxy traces with backend-exported cache metrics, then compare SemanticKV replay predictions against measured serving behavior.
+
+## Milestone 4A — Cache-Locality Routing
+
+Routing is easier and safer than backend eviction control because it operates outside the model server. Instead of modifying vLLM or SGLang cache internals, SemanticKV can choose which replica receives a request. If similar prompts consistently reach the same replica, the backend's own prefix cache has a better chance of being useful.
+
+The semantic router measures and records:
+
+- selected replica
+- estimated overlap between incoming prompt blocks and router-side replica state
+- overlap by semantic type
+- replica load
+- session-affinity hits
+- fallback count
+
+The router-side cache state is an approximation. It tracks recently routed block hashes, token counts, and semantic labels with an LRU budget per replica. It cannot prove that a backend GPU KV cache still holds the same blocks. Backend metrics are still required for strong production validation.
+
+This design connects cleanly to a Ray Serve or vLLM production stack: deploy multiple OpenAI-compatible replicas, place SemanticKV's router in front, collect routing decisions and backend latency, and compare cache-locality metrics against ordinary round-robin or least-loaded routing. It remains observability and routing, not internal cache eviction control.
