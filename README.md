@@ -144,6 +144,29 @@ Valid claim: “On replay of the same trace, adaptive semantic eviction would ha
 
 Invalid claim: “Adaptive semantic eviction produced this speedup on a real GPU backend.” The current repo does not deploy or modify vLLM, SGLang, Ray Serve, or GPU KV-cache internals.
 
+## Collecting Serving-Style Traces
+
+SemanticKV also includes a backend-agnostic trace collection layer. It can wrap a mock or real request handler, segment prompts into semantic blocks, record observed timing metadata, and write JSONL traces compatible with `scripts/replay_trace.py`.
+
+This is observability/export tooling only. It does not control real backend cache admission or eviction.
+
+Collect a mock trace:
+
+```bash
+python scripts/collect_mock_trace.py --requests 50 --output-name mock_trace
+```
+
+Replay that trace:
+
+```bash
+python scripts/replay_trace.py \
+  --trace outputs/live_traces/<path>.jsonl \
+  --cache-token-budget 10000 \
+  --policies lru adaptive_semantic static_semantic
+```
+
+The collector can drop raw prompt text and keep only deterministic content hashes, token counts, semantic labels, and timing fields. This mirrors the production-safe telemetry shape needed before collecting traces from vLLM, SGLang, Ray Serve, or other serving stacks.
+
 ## Fast Health Check
 
 ```bash

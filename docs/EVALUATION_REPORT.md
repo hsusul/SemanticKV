@@ -150,3 +150,23 @@ This avoids benchmark theater because the project does not claim adaptive evicti
 4. future backend integration.
 
 A future vLLM, SGLang, or Ray Serve integration should start as observability only, validate simulator predictions against real traces, and add cache-control adapters only where the backend exposes safe admission or eviction hooks.
+
+## Trace Collection Layer
+
+Synthetic workloads are controlled tests, while trace replay evaluates fixed request sequences. The trace collection layer produces those request sequences from a serving path.
+
+The current collector is backend-agnostic: it wraps a request handler, measures timing, segments the prompt into SemanticKV trace blocks, and writes one `TraceRequest` per JSONL line. The default demo uses `MockLLMBackend`, but the same interface can wrap a real generation function later.
+
+The collector records:
+
+- request and session identifiers
+- model name and backend label
+- semantic prompt blocks
+- deterministic content hashes
+- token counts
+- observed TTFT and total latency when available
+- observed prefix-hit and prefill-token fields when available
+
+Raw prompt text can be dropped so traces preserve cache-relevant structure without storing sensitive prompts. This makes the layer suitable as an observability/export step before any real vLLM, SGLang, or Ray Serve integration.
+
+The current collector does not control backend eviction. It creates replayable telemetry. Real backend integration should come later, after offline replay shows the simulator tracks measured behavior well enough to justify implementation work.

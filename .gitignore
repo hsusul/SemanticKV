@@ -12,4 +12,6 @@ outputs/experiments/*
 !outputs/experiments/.gitkeep
 outputs/traces/*
 !outputs/traces/.gitkeep
+outputs/live_traces/*
+!outputs/live_traces/.gitkeep
 .DS_Store

@@ -18,6 +18,8 @@ def main() -> None:
     from semantic_kv.policies.static_semantic import StaticSemanticPolicy
     from semantic_kv.latency.models import CalibratedLatencyModel, LinearLatencyModel
     from semantic_kv.traces.replay import TraceReplayRunner
+    from semantic_kv.collectors.jsonl_collector import JsonlTraceCollector
+    from semantic_kv.collectors.mock_backend import MockLLMBackend
 
     config_dir = Path("configs/experiments")
     if not config_dir.exists():
@@ -50,12 +52,17 @@ def main() -> None:
     _ = LinearLatencyModel()
     _ = CalibratedLatencyModel()
     _ = TraceReplayRunner
+    _ = JsonlTraceCollector
+    _ = MockLLMBackend()
+    if not Path("scripts/collect_mock_trace.py").exists():
+        raise SystemExit("scripts/collect_mock_trace.py does not exist")
 
     print("SemanticKV project check passed")
     print(f"Package version: {semantic_kv.__version__}")
     print(f"Experiment configs: {len(configs)}")
     print(f"Policies: {policy_names}")
     print(f"Example traces: {len(required_traces)}")
+    print("Collector imports: ok")
     print("Trace replay imports: ok")
     print("FastAPI app import: ok")
 
