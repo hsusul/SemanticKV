@@ -105,6 +105,45 @@ Stress configs:
 - `configs/experiments/legal_review_long_context.yaml`
 - `configs/experiments/workload_shift_static_vs_adaptive.yaml`
 
+## Trace Replay and Calibration
+
+The synthetic experiments use a configurable estimated TTFT model. Trace replay adds a more credible offline validation step: load serving-style request telemetry, optionally fit the latency model from observed TTFT/prefill-token fields, and replay the same request sequence through multiple cache policies.
+
+Example:
+
+```bash
+python scripts/replay_trace.py \
+  --trace examples/traces/rag_serving_trace.jsonl \
+  --cache-token-budget 50000 \
+  --policies lru adaptive_semantic static_semantic
+```
+
+With calibration:
+
+```bash
+python scripts/replay_trace.py \
+  --trace examples/traces/rag_serving_trace.jsonl \
+  --calibrate-from-trace \
+  --cache-token-budget 50000
+```
+
+Trace replay outputs are written under:
+
+```text
+outputs/traces/<timestamp>_<output_name>/
+  replay_results.json
+  replay_metrics.csv
+  replay_summary.md
+  replay_policy_avg_ttft.png
+  replay_tokens_saved.png
+  replay_hit_rate.png
+  observed_vs_simulated_ttft.png
+```
+
+Valid claim: “On replay of the same trace, adaptive semantic eviction would have preserved more reusable tokens under SemanticKV’s calibrated latency model.”
+
+Invalid claim: “Adaptive semantic eviction produced this speedup on a real GPU backend.” The current repo does not deploy or modify vLLM, SGLang, Ray Serve, or GPU KV-cache internals.
+
 ## Fast Health Check
 
 ```bash

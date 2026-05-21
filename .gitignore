@@ -10,5 +10,6 @@ build/
 *.egg-info/
 outputs/experiments/*
 !outputs/experiments/.gitkeep
+outputs/traces/*
+!outputs/traces/.gitkeep
 .DS_Store
-

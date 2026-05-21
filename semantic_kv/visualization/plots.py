@@ -124,3 +124,55 @@ def _memory_utilization(result: ExperimentResult, output: Path) -> Path:
     fig.savefig(path, dpi=160)
     plt.close(fig)
     return path
+
+
+def write_trace_replay_plots(result: dict, output_dir: str | Path) -> list[Path]:
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    metrics = result["metrics_by_policy"]
+    paths = [
+        _trace_bar(metrics, output, "estimated_ttft_ms_avg", "Avg Estimated TTFT (ms)", "replay_policy_avg_ttft.png"),
+        _trace_bar(metrics, output, "tokens_saved_total", "Tokens Saved", "replay_tokens_saved.png"),
+        _trace_bar(metrics, output, "hit_rate", "Hit Rate", "replay_hit_rate.png"),
+    ]
+    observed = result.get("observed_summary") or {}
+    if observed.get("observed_avg_ttft_ms") is not None:
+        paths.append(_observed_vs_simulated_ttft(result, output))
+    return paths
+
+
+def _trace_policy_order(metrics: dict) -> list[str]:
+    return sorted(metrics, key=lambda p: metrics[p]["estimated_ttft_ms_avg"])
+
+
+def _trace_bar(metrics: dict, output: Path, field: str, ylabel: str, filename: str) -> Path:
+    policies = _trace_policy_order(metrics)
+    values = [metrics[p][field] for p in policies]
+    fig, ax = plt.subplots(figsize=(8.5, 4.6))
+    ax.bar(policies, values, color="#4F6F52")
+    ax.set_ylabel(ylabel)
+    ax.set_title(f"Trace Replay {ylabel} by Policy")
+    ax.tick_params(axis="x", rotation=25)
+    ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    path = output / filename
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+    return path
+
+
+def _observed_vs_simulated_ttft(result: dict, output: Path) -> Path:
+    observed = result["observed_summary"]["observed_avg_ttft_ms"]
+    lru = result["metrics_by_policy"].get("lru", {}).get("estimated_ttft_ms_avg")
+    labels = ["observed", "simulated_lru"]
+    values = [observed, lru or 0.0]
+    fig, ax = plt.subplots(figsize=(6.5, 4.2))
+    ax.bar(labels, values, color=["#8B5E34", "#476A6F"])
+    ax.set_ylabel("Avg TTFT ms")
+    ax.set_title("Observed vs Simulated LRU TTFT")
+    ax.grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    path = output / "observed_vs_simulated_ttft.png"
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+    return path

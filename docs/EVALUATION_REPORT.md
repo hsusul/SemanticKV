@@ -118,3 +118,35 @@ Future work can integrate with vLLM, SGLang, or Ray Serve when cache telemetry a
 3. Replay traces through SemanticKV using the same cache capacity envelope.
 4. Compare predicted policy deltas with measured backend outcomes.
 5. Only then introduce backend-specific admission/eviction hooks.
+
+## Real-Serving Validation Path
+
+The current simulator limitation is that synthetic experiments use a configured TTFT formula. This is useful for controlled policy comparison, but it is not production evidence. Trace replay narrows that gap without requiring GPUs or backend internals.
+
+The trace telemetry needed for offline validation is:
+
+- request timestamp, session ID, tenant ID, and model name
+- semantic prompt blocks with token counts
+- anonymized block hashes instead of raw text when traces contain sensitive data
+- observed TTFT if available
+- observed prefix-hit tokens and prefill tokens if the serving backend exposes them
+- optional total latency and cache metadata
+
+SemanticKV now supports JSONL, JSON, and CSV trace loading. The anonymization helper can hash block text while preserving semantic type and token count, which is the minimum useful signal for cache replay without storing private prompts.
+
+Latency calibration fits a simple linear model from observed TTFT and observed prefill-token counts:
+
+```text
+calibrated_estimated_ttft_ms = fitted_base_ms + uncached_tokens * fitted_ms_per_uncached_token
+```
+
+Offline trace replay then asks a counterfactual question: on the same request sequence and cache budget, how would each policy behave under the simulator's calibrated latency model? The result is still simulated, but it is grounded in serving-style telemetry rather than only synthetic workload generation.
+
+This avoids benchmark theater because the project does not claim adaptive eviction was deployed or accelerated a GPU server. It separates:
+
+1. simulator policy behavior,
+2. latency-model calibration,
+3. offline trace replay, and
+4. future backend integration.
+
+A future vLLM, SGLang, or Ray Serve integration should start as observability only, validate simulator predictions against real traces, and add cache-control adapters only where the backend exposes safe admission or eviction hooks.
